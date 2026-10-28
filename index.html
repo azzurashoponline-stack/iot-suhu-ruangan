@@ -113,15 +113,15 @@
 
   <script>
     // Konfigurasi Firebase Global
-    const firebaseConfig = {
-      apiKey: "AIzaSyDT9qR7sXFsKVuT-u3kXd1jDOhLCuDsVLk",
-      authDomain: "iot-fire-sensor.firebaseapp.com",
-      databaseURL: "https://iot-fire-sensor-default-rtdb.asia-southeast1.firebasedatabase.app/",
-      projectId: "iot-fire-sensor",
-      storageBucket: "iot-fire-sensor.firebasestorage.app",
-      messagingSenderId: "952901033888",
-      appId: "1:952901033888:web:8f7873e3a54b8e43dd4ec5"
-    };
+   const firebaseConfig = {
+  apiKey: "AIzaSyDT9qR7sXFsKVuT-u3kXd1jDOhLCuDsVLk",
+  authDomain: "iot-fire-sensor.firebaseapp.com",
+  databaseURL: "https://iot-fire-sensor-default-rtdb.firebaseio.com/", // <-- Pastikan ini tanpa asia-southeast1
+  projectId: "iot-fire-sensor",
+  storageBucket: "iot-fire-sensor.firebasestorage.app",
+  messagingSenderId: "952901033888",
+  appId: "1:952901033888:web:8f7873e3a54b8e43dd4ec5"
+};
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
