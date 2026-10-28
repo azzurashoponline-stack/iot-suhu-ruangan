@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Monitor Suhu Ruangan</title>
+  <title>Fire Alarm</title>
   <style>
     body { 
       font-family: Arial, sans-serif; 
@@ -78,19 +78,46 @@
   <div id="fireContainer"></div>
 
   <div class="content-box">
-    <h1>Suhu Ruangan</h1>
+    <h1>Fire Alarm</h1>
     <div class="suhu" id="nilaiSuhu">-- &deg;C</div>
 
     <div class="container">
-      <div class="indicator"><div class="circle" id="indHijau"></div><span>Hijau</span></div>
-      <div class="indicator"><div class="circle" id="indMerah"></div><span>Merah</span></div>
-      <div class="indicator"><div class="circle buzzer-off" id="indBuzzer"></div><span id="textBuzzer">Buzzer</span></div>
+      <div class="indicator">
+        <div class="circle" id="indHijau"></div>
+        <span>Aman</span>
+      </div>
+      <div class="indicator">
+        <div class="circle" id="indMerah"></div>
+        <span>Panas</span>
+      </div>
+      <div class="indicator">
+        <div class="circle buzzer-off" id="indBuzzer"></div>
+        <span id="textBuzzer">Buzzer</span>
+      </div>
     </div>
 
-    <button class="btn" id="btnMute" onclick="muteBuzzer()">MUTE BUZZER</button>
+    <button class="btn" id="btnMute" onclick="toggleMute()">MUTE BUZZER</button>
   </div>
 
+  <!-- Firebase SDK Compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <script>
+    // Konfigurasi Firebase Proyek Anda (iot-fire-sensor)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDT9qR7sXFsKVuT-u3kXd1jDOhLCuDsVLk",
+      authDomain: "iot-fire-sensor.firebaseapp.com",
+      databaseURL: "https://iot-fire-sensor-default-rtdb.asia-southeast1.firebasedatabase.app/",
+      projectId: "iot-fire-sensor",
+      storageBucket: "iot-fire-sensor.firebasestorage.app",
+      messagingSenderId: "952901033888",
+      appId: "1:952901033888:web:8f7873e3a54b8e43dd4ec5"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     let fireInterval = null;
 
     function buatEmojiApi() {
@@ -109,50 +136,47 @@
         fire.style.animationDuration = randomDuration + 's';
 
         container.appendChild(fire);
-
         setTimeout(() => { fire.remove(); }, randomDuration * 1000);
       }
     }
 
-    setInterval(updateData, 300);
+    // Mendengarkan data secara Real-time dari Firebase
+    db.ref('sensor').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
 
-    function updateData() {
-      // Catatan: Fetch ini nantinya akan diubah ke Database Cloud (Firebase) 
-      // agar bisa diakses secara global lewat internet.
-      fetch('/data')
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById('nilaiSuhu').innerHTML = data.suhu + ' &deg;C';
-          
-          document.getElementById('indHijau').style.backgroundColor = data.hijau ? '#2ecc71' : '#1e4a2f';
-          document.getElementById('indHijau').style.boxShadow = data.hijau ? '0 0 20px #2ecc71' : '0 0 10px #000';
-          
-          document.getElementById('indMerah').style.backgroundColor = data.merah ? '#e74c3c' : '#4a1e1e';
-          document.getElementById('indMerah').style.boxShadow = data.merah ? '0 0 20px #e74c3c' : '0 0 10px #000';
-          
-          let indBuzzer = document.getElementById('indBuzzer');
-          if (data.buzzer) {
-            indBuzzer.className = 'circle buzzer-on';
-            if (!fireInterval) { fireInterval = setInterval(buatEmojiApi, 30); }
-          } else {
-            indBuzzer.className = 'circle buzzer-off';
-            if (fireInterval) { clearInterval(fireInterval); fireInterval = null; }
-          }
-          
-          let btn = document.getElementById('btnMute');
-          let txtBz = document.getElementById('textBuzzer');
-          if (data.is_muted) {
-            btn.innerHTML = "BUZZER DIMUTE"; btn.style.backgroundColor = "#555";
-            btn.style.borderColor = "#222"; txtBz.innerHTML = "Buzzer (Muted)";
-          } else {
-            btn.innerHTML = "MUTE BUZZER"; btn.style.backgroundColor = "#e74c3c";
-            btn.style.borderColor = "#c0392b"; txtBz.innerHTML = "Buzzer";
-          }
-        }).catch(err => {});
-    }
+      document.getElementById('nilaiSuhu').innerHTML = Number(data.suhu).toFixed(1) + ' &deg;C';
+      
+      document.getElementById('indHijau').style.backgroundColor = data.hijau ? '#2ecc71' : '#1e4a2f';
+      document.getElementById('indMerah').style.backgroundColor = data.merah ? '#e74c3c' : '#4a1e1e';
+      
+      let indBuzzer = document.getElementById('indBuzzer');
+      if (data.buzzer) {
+        indBuzzer.className = 'circle buzzer-on';
+        if (!fireInterval) { fireInterval = setInterval(buatEmojiApi, 30); }
+      } else {
+        indBuzzer.className = 'circle buzzer-off';
+        if (fireInterval) { clearInterval(fireInterval); fireInterval = null; }
+      }
+      
+      let btn = document.getElementById('btnMute');
+      let txtBz = document.getElementById('textBuzzer');
+      if (data.is_muted) {
+        btn.innerHTML = "BUZZER DIMUTE";
+        btn.style.backgroundColor = "#555";
+        txtBz.innerHTML = "Buzzer (Muted)";
+      } else {
+        btn.innerHTML = "MUTE BUZZER";
+        btn.style.backgroundColor = "#e74c3c";
+        txtBz.innerHTML = "Buzzer";
+      }
+    });
 
-    function muteBuzzer() {
-      fetch('/mute'); 
+    function toggleMute() {
+      db.ref('sensor/is_muted').once('value').then((snapshot) => {
+        let statusSekarang = snapshot.val();
+        db.ref('sensor').update({ is_muted: !statusSekarang });
+      });
     }
   </script>
 </body>
