@@ -10,7 +10,7 @@
       background: linear-gradient(180deg, #1e0903 0%, #5e1c08 40%, #b3390c 100%);
       color: white; 
       margin: 0; 
-      padding-top: 50px; 
+      padding-top: 30px; 
       min-height: 100vh;
       overflow: hidden; 
       position: relative;
@@ -35,17 +35,9 @@
     }
 
     @keyframes melayangNaik {
-      0% {
-        transform: translateY(0) scale(0.5) rotate(0deg);
-        opacity: 1;
-      }
-      50% {
-        opacity: 0.9;
-      }
-      100% {
-        transform: translateY(-120vh) scale(2.0) rotate(25deg);
-        opacity: 0;
-      }
+      0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 1; }
+      50% { opacity: 0.9; }
+      100% { transform: translateY(-120vh) scale(2.0) rotate(25deg); opacity: 0; }
     }
 
     .content-box {
@@ -53,16 +45,43 @@
       z-index: 10;
       background: rgba(0, 0, 0, 0.65);
       display: inline-block;
-      padding: 30px 40px;
+      padding: 25px 35px;
       border-radius: 20px;
       box-shadow: 0 0 30px rgba(0,0,0,0.8);
       border: 1px solid rgba(255, 140, 0, 0.4);
       backdrop-filter: blur(5px);
     }
 
-    h1 { font-size: 2rem; margin-top: 0; }
-    .suhu { font-size: 4rem; font-weight: bold; color: #f1c40f; margin-bottom: 30px; text-shadow: 2px 2px 5px #000; }
-    .container { display: flex; justify-content: center; gap: 30px; margin-bottom: 40px; }
+    h1 { font-size: 2rem; margin-top: 0; margin-bottom: 10px; }
+    .suhu { font-size: 3.5rem; font-weight: bold; color: #f1c40f; margin-bottom: 20px; text-shadow: 2px 2px 5px #000; }
+    
+    /* Animasi Teks WARNING Berkedip */
+    .warning-text {
+      font-size: 2.8rem;
+      font-weight: bold;
+      color: #ff2a2a;
+      text-shadow: 0 0 15px #ff0000, 0 0 30px #ff0000;
+      animation: blinkWarning 0.6s infinite alternate;
+      margin: 15px 0 5px 0;
+      display: none;
+      letter-spacing: 2px;
+    }
+
+    @keyframes blinkWarning {
+      0% { opacity: 0.2; transform: scale(0.95); }
+      100% { opacity: 1; transform: scale(1.05); }
+    }
+
+    .level-text {
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #ffaa00;
+      margin-bottom: 25px;
+      display: none;
+      text-shadow: 1px 1px 3px #000;
+    }
+
+    .container { display: flex; justify-content: center; gap: 30px; margin-bottom: 30px; }
     .indicator { display: flex; flex-direction: column; align-items: center; }
     
     .circle { width: 60px; height: 60px; border-radius: 50%; background-color: #555; margin-bottom: 10px; transition: 0.2s; box-shadow: 0 0 10px #000; }
@@ -78,7 +97,7 @@
       border: 2px solid #333;
     }
 
-    .btn { background-color: #e74c3c; color: white; border: 2px solid #c0392b; padding: 15px 30px; font-size: 1.2rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    .btn { background-color: #e74c3c; color: white; border: 2px solid #c0392b; padding: 12px 25px; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
     .btn:active { transform: scale(0.95); }
   </style>
 </head>
@@ -88,6 +107,10 @@
   <div class="content-box">
     <h1>Fire Alarm</h1>
     <div class="suhu" id="nilaiSuhu">-- &deg;C</div>
+
+    <!-- Teks Peringatan Besar & Level Bahaya -->
+    <div class="warning-text" id="txtWarning">WARNING</div>
+    <div class="level-text" id="txtLevel">--</div>
 
     <div class="container">
       <div class="indicator">
@@ -112,16 +135,15 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
-    // Konfigurasi Firebase Global
-   const firebaseConfig = {
-  apiKey: "AIzaSyDT9qR7sXFsKVuT-u3kXd1jDOhLCuDsVLk",
-  authDomain: "iot-fire-sensor.firebaseapp.com",
-  databaseURL: "https://iot-fire-sensor-default-rtdb.firebaseio.com/", // <-- Pastikan ini tanpa asia-southeast1
-  projectId: "iot-fire-sensor",
-  storageBucket: "iot-fire-sensor.firebasestorage.app",
-  messagingSenderId: "952901033888",
-  appId: "1:952901033888:web:8f7873e3a54b8e43dd4ec5"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyDT9qR7sXFsKVuT-u3kXd1jDOhLCuDsVLk",
+      authDomain: "iot-fire-sensor.firebaseapp.com",
+      databaseURL: "https://iot-fire-sensor-default-rtdb.firebaseio.com/",
+      projectId: "iot-fire-sensor",
+      storageBucket: "iot-fire-sensor.firebasestorage.app",
+      messagingSenderId: "952901033888",
+      appId: "1:952901033888:web:8f7873e3a54b8e43dd4ec5"
+    };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -129,10 +151,8 @@
     let fireInterval = null;
     let currentBahaya = 0;
 
-    // Fungsi Pembawa Emoji Api
     function buatEmojiApi(jumlah = 5) {
       const container = document.getElementById('fireContainer');
-      
       for(let i = 0; i < jumlah; i++) {
         const fire = document.createElement('div');
         fire.className = 'fire-emoji';
@@ -147,14 +167,10 @@
         fire.style.animationDuration = randomDuration + 's';
 
         container.appendChild(fire);
-
-        setTimeout(() => {
-          fire.remove();
-        }, randomDuration * 1000);
+        setTimeout(() => { fire.remove(); }, randomDuration * 1000);
       }
     }
 
-    // Sinkronisasi Real-Time dengan Firebase
     db.ref('sensor').on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
@@ -162,30 +178,41 @@
       document.getElementById('nilaiSuhu').innerHTML = Number(data.suhu).toFixed(1) + ' &deg;C';
       
       document.getElementById('indHijau').style.backgroundColor = data.hijau ? '#2ecc71' : '#1e4a2f';
-      document.getElementById('indHijau').style.boxShadow = data.hijau ? '0 0 20px #2ecc71' : '0 0 10px #000';
-      
       document.getElementById('indMerah').style.backgroundColor = data.merah ? '#e74c3c' : '#4a1e1e';
-      document.getElementById('indMerah').style.boxShadow = data.merah ? '0 0 20px #e74c3c' : '0 0 10px #000';
       
       let indBuzzer = document.getElementById('indBuzzer');
-      
+      let txtWarning = document.getElementById('txtWarning');
+      let txtLevel = document.getElementById('txtLevel');
+
       if (data.bahaya > 0) {
         indBuzzer.className = 'circle buzzer-on';
+        txtWarning.style.display = 'block';
+        txtLevel.style.display = 'block';
+        
+        if (data.bahaya === 1) {
+          txtLevel.innerHTML = "Fire level 1";
+          txtLevel.style.color = "#f39c12"; // Kuning/Oranye
+        } else if (data.bahaya === 2) {
+          txtLevel.innerHTML = "Fire level 2";
+          txtLevel.style.color = "#e74c3c"; // Merah menyala
+        }
       } else {
         indBuzzer.className = 'circle buzzer-off';
+        txtWarning.style.display = 'none';
+        txtLevel.style.display = 'none';
       }
 
       // Logika Animasi Api Berdasarkan Level Bahaya
       if (data.bahaya === 2) {
         if (currentBahaya !== 2) {
           if (fireInterval) clearInterval(fireInterval);
-          fireInterval = setInterval(() => buatEmojiApi(5), 30); // Spam ekstrem 30ms
+          fireInterval = setInterval(() => buatEmojiApi(5), 30); // Spam ekstrem
           currentBahaya = 2;
         }
       } else if (data.bahaya === 1) {
         if (currentBahaya !== 1) {
           if (fireInterval) clearInterval(fireInterval);
-          fireInterval = setInterval(() => buatEmojiApi(10), 500); // Berirama buzzer 500ms
+          fireInterval = setInterval(() => buatEmojiApi(3), 500); // Sesuai irama buzzer
           currentBahaya = 1;
         }
       } else {
@@ -201,12 +228,10 @@
       if (data.is_muted) {
         btn.innerHTML = "BUZZER DIMUTE";
         btn.style.backgroundColor = "#555";
-        btn.style.borderColor = "#222";
         txtBz.innerHTML = "Buzzer (Muted)";
       } else {
         btn.innerHTML = "MUTE BUZZER";
         btn.style.backgroundColor = "#e74c3c";
-        btn.style.borderColor = "#c0392b";
         txtBz.innerHTML = "Buzzer";
       }
     });
