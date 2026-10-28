@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monitor Suhu Ruangan</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      text-align: center; 
+      background: linear-gradient(180deg, #1e0903 0%, #5e1c08 40%, #b3390c 100%);
+      color: white; 
+      margin: 0; 
+      padding-top: 50px; 
+      min-height: 100vh;
+      overflow: hidden; 
+      position: relative;
+    }
+    
+    #fireContainer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .fire-emoji {
+      position: absolute;
+      bottom: -80px;
+      animation: melayangNaik linear forwards;
+      user-select: none;
+    }
+
+    @keyframes melayangNaik {
+      0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 1; }
+      50% { opacity: 0.9; }
+      100% { transform: translateY(-120vh) scale(2.0) rotate(25deg); opacity: 0; }
+    }
+
+    .content-box {
+      position: relative;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.65);
+      display: inline-block;
+      padding: 30px 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+      border: 1px solid rgba(255, 140, 0, 0.4);
+      backdrop-filter: blur(5px);
+    }
+
+    h1 { font-size: 2rem; margin-top: 0; }
+    .suhu { font-size: 4rem; font-weight: bold; color: #f1c40f; margin-bottom: 30px; text-shadow: 2px 2px 5px #000; }
+    .container { display: flex; justify-content: center; gap: 30px; margin-bottom: 40px; }
+    .indicator { display: flex; flex-direction: column; align-items: center; }
+    
+    .circle { width: 60px; height: 60px; border-radius: 50%; background-color: #555; margin-bottom: 10px; transition: 0.2s; box-shadow: 0 0 10px #000; }
+    
+    .buzzer-on {
+      background: repeating-linear-gradient(45deg, #ff2a2a, #ff2a2a 10px, #111 10px, #111 20px) !important;
+      box-shadow: 0 0 30px #ff2a2a !important;
+      border: 2px solid #fff;
+    }
+    .buzzer-off {
+      background: repeating-linear-gradient(45deg, #5c1010, #5c1010 10px, #000 10px, #000 20px) !important;
+      box-shadow: 0 0 10px #000 !important;
+      border: 2px solid #333;
+    }
+
+    .btn { background-color: #e74c3c; color: white; border: 2px solid #c0392b; padding: 15px 30px; font-size: 1.2rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    .btn:active { transform: scale(0.95); }
+  </style>
+</head>
+<body>
+  <div id="fireContainer"></div>
+
+  <div class="content-box">
+    <h1>Suhu Ruangan</h1>
+    <div class="suhu" id="nilaiSuhu">-- &deg;C</div>
+
+    <div class="container">
+      <div class="indicator"><div class="circle" id="indHijau"></div><span>Hijau</span></div>
+      <div class="indicator"><div class="circle" id="indMerah"></div><span>Merah</span></div>
+      <div class="indicator"><div class="circle buzzer-off" id="indBuzzer"></div><span id="textBuzzer">Buzzer</span></div>
+    </div>
+
+    <button class="btn" id="btnMute" onclick="muteBuzzer()">MUTE BUZZER</button>
+  </div>
+
+  <script>
+    let fireInterval = null;
+
+    function buatEmojiApi() {
+      const container = document.getElementById('fireContainer');
+      for(let i = 0; i < 5; i++) {
+        const fire = document.createElement('div');
+        fire.className = 'fire-emoji';
+        fire.innerHTML = '&#128293;';
+        
+        const randomLeft = Math.random() * 100; 
+        const randomSize = Math.random() * 50 + 20; 
+        const randomDuration = Math.random() * 1.2 + 0.5; 
+
+        fire.style.left = randomLeft + '%';
+        fire.style.fontSize = randomSize + 'px';
+        fire.style.animationDuration = randomDuration + 's';
+
+        container.appendChild(fire);
+
+        setTimeout(() => { fire.remove(); }, randomDuration * 1000);
+      }
+    }
+
+    setInterval(updateData, 300);
+
+    function updateData() {
+      // Catatan: Fetch ini nantinya akan diubah ke Database Cloud (Firebase) 
+      // agar bisa diakses secara global lewat internet.
+      fetch('/data')
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('nilaiSuhu').innerHTML = data.suhu + ' &deg;C';
+          
+          document.getElementById('indHijau').style.backgroundColor = data.hijau ? '#2ecc71' : '#1e4a2f';
+          document.getElementById('indHijau').style.boxShadow = data.hijau ? '0 0 20px #2ecc71' : '0 0 10px #000';
+          
+          document.getElementById('indMerah').style.backgroundColor = data.merah ? '#e74c3c' : '#4a1e1e';
+          document.getElementById('indMerah').style.boxShadow = data.merah ? '0 0 20px #e74c3c' : '0 0 10px #000';
+          
+          let indBuzzer = document.getElementById('indBuzzer');
+          if (data.buzzer) {
+            indBuzzer.className = 'circle buzzer-on';
+            if (!fireInterval) { fireInterval = setInterval(buatEmojiApi, 30); }
+          } else {
+            indBuzzer.className = 'circle buzzer-off';
+            if (fireInterval) { clearInterval(fireInterval); fireInterval = null; }
+          }
+          
+          let btn = document.getElementById('btnMute');
+          let txtBz = document.getElementById('textBuzzer');
+          if (data.is_muted) {
+            btn.innerHTML = "BUZZER DIMUTE"; btn.style.backgroundColor = "#555";
+            btn.style.borderColor = "#222"; txtBz.innerHTML = "Buzzer (Muted)";
+          } else {
+            btn.innerHTML = "MUTE BUZZER"; btn.style.backgroundColor = "#e74c3c";
+            btn.style.borderColor = "#c0392b"; txtBz.innerHTML = "Buzzer";
+          }
+        }).catch(err => {});
+    }
+
+    function muteBuzzer() {
+      fetch('/mute'); 
+    }
+  </script>
+</body>
+</html>
