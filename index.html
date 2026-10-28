@@ -35,9 +35,17 @@
     }
 
     @keyframes melayangNaik {
-      0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 1; }
-      50% { opacity: 0.9; }
-      100% { transform: translateY(-120vh) scale(2.0) rotate(25deg); opacity: 0; }
+      0% {
+        transform: translateY(0) scale(0.5) rotate(0deg);
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.9;
+      }
+      100% {
+        transform: translateY(-120vh) scale(2.0) rotate(25deg);
+        opacity: 0;
+      }
     }
 
     .content-box {
@@ -99,12 +107,12 @@
     <button class="btn" id="btnMute" onclick="toggleMute()">MUTE BUZZER</button>
   </div>
 
-  <!-- Firebase SDK Compat -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
-    // Konfigurasi Firebase Proyek Anda (iot-fire-sensor)
+    // Konfigurasi Firebase Global
     const firebaseConfig = {
       apiKey: "AIzaSyDT9qR7sXFsKVuT-u3kXd1jDOhLCuDsVLk",
       authDomain: "iot-fire-sensor.firebaseapp.com",
@@ -119,10 +127,13 @@
     const db = firebase.database();
 
     let fireInterval = null;
+    let currentBahaya = 0;
 
-    function buatEmojiApi() {
+    // Fungsi Pembawa Emoji Api
+    function buatEmojiApi(jumlah = 5) {
       const container = document.getElementById('fireContainer');
-      for(let i = 0; i < 5; i++) {
+      
+      for(let i = 0; i < jumlah; i++) {
         const fire = document.createElement('div');
         fire.className = 'fire-emoji';
         fire.innerHTML = '&#128293;';
@@ -136,11 +147,14 @@
         fire.style.animationDuration = randomDuration + 's';
 
         container.appendChild(fire);
-        setTimeout(() => { fire.remove(); }, randomDuration * 1000);
+
+        setTimeout(() => {
+          fire.remove();
+        }, randomDuration * 1000);
       }
     }
 
-    // Mendengarkan data secara Real-time dari Firebase
+    // Sinkronisasi Real-Time dengan Firebase
     db.ref('sensor').on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
@@ -148,15 +162,38 @@
       document.getElementById('nilaiSuhu').innerHTML = Number(data.suhu).toFixed(1) + ' &deg;C';
       
       document.getElementById('indHijau').style.backgroundColor = data.hijau ? '#2ecc71' : '#1e4a2f';
+      document.getElementById('indHijau').style.boxShadow = data.hijau ? '0 0 20px #2ecc71' : '0 0 10px #000';
+      
       document.getElementById('indMerah').style.backgroundColor = data.merah ? '#e74c3c' : '#4a1e1e';
+      document.getElementById('indMerah').style.boxShadow = data.merah ? '0 0 20px #e74c3c' : '0 0 10px #000';
       
       let indBuzzer = document.getElementById('indBuzzer');
-      if (data.buzzer) {
+      
+      if (data.bahaya > 0) {
         indBuzzer.className = 'circle buzzer-on';
-        if (!fireInterval) { fireInterval = setInterval(buatEmojiApi, 30); }
       } else {
         indBuzzer.className = 'circle buzzer-off';
-        if (fireInterval) { clearInterval(fireInterval); fireInterval = null; }
+      }
+
+      // Logika Animasi Api Berdasarkan Level Bahaya
+      if (data.bahaya === 2) {
+        if (currentBahaya !== 2) {
+          if (fireInterval) clearInterval(fireInterval);
+          fireInterval = setInterval(() => buatEmojiApi(5), 30); // Spam ekstrem 30ms
+          currentBahaya = 2;
+        }
+      } else if (data.bahaya === 1) {
+        if (currentBahaya !== 1) {
+          if (fireInterval) clearInterval(fireInterval);
+          fireInterval = setInterval(() => buatEmojiApi(10), 500); // Berirama buzzer 500ms
+          currentBahaya = 1;
+        }
+      } else {
+        if (currentBahaya !== 0) {
+          if (fireInterval) clearInterval(fireInterval);
+          fireInterval = null;
+          currentBahaya = 0;
+        }
       }
       
       let btn = document.getElementById('btnMute');
@@ -164,10 +201,12 @@
       if (data.is_muted) {
         btn.innerHTML = "BUZZER DIMUTE";
         btn.style.backgroundColor = "#555";
+        btn.style.borderColor = "#222";
         txtBz.innerHTML = "Buzzer (Muted)";
       } else {
         btn.innerHTML = "MUTE BUZZER";
         btn.style.backgroundColor = "#e74c3c";
+        btn.style.borderColor = "#c0392b";
         txtBz.innerHTML = "Buzzer";
       }
     });
