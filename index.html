@@ -136,7 +136,8 @@
       font-family: 'Share Tech Mono', monospace;
       font-size: clamp(2.8rem, 5vw, 3.5rem);
       font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums;
-      color: #ffaa00; text-shadow: 0 0 15px rgba(255, 170, 0, 0.4); line-height: 1;
+      color: #5c6b80; text-shadow: 0 0 15px rgba(92, 107, 128, 0.4); line-height: 1;
+      transition: color 0.3s, text-shadow 0.3s;
     }
     @media (max-width: 640px) {
       .gauge-display-panel { grid-template-columns: minmax(0, 1fr); gap: 12px; }
@@ -247,10 +248,10 @@
           <defs>
             <linearGradient id="gaugeZoneGradient" gradientUnits="userSpaceOnUse" x1="30" y1="120" x2="210" y2="120">
               <stop offset="0%" stop-color="#00ff66"/>
-              <stop offset="25%" stop-color="#00ff66"/>
-              <stop offset="31%" stop-color="#f39c12"/>
-              <stop offset="47%" stop-color="#f39c12"/>
-              <stop offset="53%" stop-color="#ff2a2a"/>
+              <stop offset="27.3%" stop-color="#00ff66"/>
+              <stop offset="27.3%" stop-color="#f39c12"/>
+              <stop offset="50%" stop-color="#f39c12"/>
+              <stop offset="50%" stop-color="#ff2a2a"/>
               <stop offset="100%" stop-color="#ff2a2a"/>
             </linearGradient>
           </defs>
@@ -268,8 +269,8 @@
 
           <!-- Needle -->
           <g class="needle" id="gaugeNeedle">
-            <line x1="120" y1="120" x2="120" y2="38" stroke="#ff2a2a" stroke-width="3" stroke-linecap="round"/>
-            <circle cx="120" cy="120" r="8" fill="#ff2a2a"/>
+            <line x1="120" y1="120" x2="120" y2="38" stroke="#5c6b80" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="120" cy="120" r="8" fill="#5c6b80"/>
             <circle cx="120" cy="120" r="4" fill="#ffffff"/>
           </g>
         </svg>
@@ -397,6 +398,19 @@
       return 'NORMAL';
     }
 
+    function updateInstrumentColor(suhu) {
+      const color = suhu >= 50 ? '#ff2a2a'
+        : suhu >= 35 ? '#f39c12'
+        : '#00ff66';
+      const needle = document.getElementById('gaugeNeedle');
+      needle.querySelector('line').setAttribute('stroke', color);
+      needle.querySelector('circle').setAttribute('fill', color);
+
+      const counter = document.getElementById('nilaiSuhu');
+      counter.style.color = color;
+      counter.style.textShadow = `0 0 15px ${color}66`;
+    }
+
     db.ref('sensor').on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
@@ -407,6 +421,7 @@
       // Update Gauge Needle (Rotasi dari -90deg ke +90deg berdasarkan suhu 0-100°C)
       let angle = Math.min(Math.max((data.suhu / 100) * 180 - 90, -90), 90);
       document.getElementById('gaugeNeedle').style.transform = `rotate(${angle}deg)`;
+      updateInstrumentColor(Number(data.suhu));
 
       // Update Digital LCD Display
       document.getElementById('nilaiSuhu').innerHTML = Number(data.suhu).toFixed(1) + '<span style="font-size: 1.8rem;">°C</span>';
