@@ -380,16 +380,29 @@
       }
     });
 
-    let lastBahayaState = null;
+    let lastTemperatureState = null;
     let lastMuteState = null;
     let lastSensorState = null;
     let currentSuhuGlobal = 0;
+
+    function getTemperatureState(data) {
+      const suhu = Number(data.suhu);
+      if (data.sensor_ready === false || data.suhu === null || data.suhu === '' || !Number.isFinite(suhu)) {
+        return 'FAULT';
+      }
+
+      const bahaya = Number(data.bahaya) || 0;
+      if (suhu >= 50 || bahaya >= 2) return 'ALARM';
+      if (suhu >= 35 || bahaya === 1 || data.merah === true) return 'WARNING';
+      return 'NORMAL';
+    }
 
     db.ref('sensor').on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
 
-      currentSuhuGlobal = data.suhu;
+      const temperatureState = getTemperatureState(data);
+      currentSuhuGlobal = Number(data.suhu);
 
       // Update Gauge Needle (Rotasi dari -90deg ke +90deg berdasarkan suhu 0-100°C)
       let angle = Math.min(Math.max((data.suhu / 100) * 180 - 90, -90), 90);
@@ -434,9 +447,15 @@
       }
 
       // Annunciator Tiles Matrix Update
-      document.getElementById('tileAman').className = data.hijau ? 'annunciator-tile tile-aman tile-active' : 'annunciator-tile tile-aman';
-      document.getElementById('tilePanas').className = (data.merah && !data.bahaya) ? 'annunciator-tile tile-panas tile-active' : 'annunciator-tile tile-panas';
-      document.getElementById('tileAlarm').className = data.bahaya ? 'annunciator-tile tile-alarm tile-active' : 'annunciator-tile tile-alarm';
+      document.getElementById('tileAman').className = temperatureState === 'NORMAL'
+        ? 'annunciator-tile tile-aman tile-active'
+        : 'annunciator-tile tile-aman';
+      document.getElementById('tilePanas').className = temperatureState === 'WARNING'
+        ? 'annunciator-tile tile-panas tile-active'
+        : 'annunciator-tile tile-panas';
+      document.getElementById('tileAlarm').className = temperatureState === 'ALARM'
+        ? 'annunciator-tile tile-alarm tile-active'
+        : 'annunciator-tile tile-alarm';
       document.getElementById('tileSiren').className = data.buzzer_ui ? 'annunciator-tile tile-siren tile-active' : 'annunciator-tile tile-siren';
 
       // Tombol Mute Switch State
@@ -458,15 +477,15 @@
       }
 
       // Live Terminal Logging untuk Kejadian Bahaya
-      if (data.bahaya !== lastBahayaState) {
-        if (data.bahaya) {
+      if (temperatureState !== lastTemperatureState) {
+        if (temperatureState === 'ALARM') {
           catatLog(`ALARM_TRIGGER: Temp ${data.suhu.toFixed(1)}°C >= 50°C! FIRE ALARM ACTIVE!`, "log-danger");
-        } else if (data.merah) {
+        } else if (temperatureState === 'WARNING') {
           catatLog(`WARN_EVENT: Temp ${data.suhu.toFixed(1)}°C >= 35°C. Status: WASPADA.`, "log-warn");
-        } else {
+        } else if (temperatureState === 'NORMAL') {
           catatLog(`SYS_NORMAL: Temp ${data.suhu.toFixed(1)}°C. Status: AMAN.`, "log-info");
         }
-        lastBahayaState = data.bahaya;
+        lastTemperatureState = temperatureState;
       }
     });
 
