@@ -89,6 +89,7 @@
     }
     .status-badge .dot { width: 12px; height: 12px; border-radius: 50%; }
     .status-ready .dot { background: var(--neon-green); box-shadow: 0 0 10px var(--neon-green); }
+    .status-connecting .dot { background: var(--neon-orange); box-shadow: 0 0 10px var(--neon-orange); }
     .status-error .dot { background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); animation: pulse 1s infinite; }
 
     .btn-info {
@@ -240,9 +241,9 @@
     </div>
 
     <div class="card top-bar">
-      <div class="status-badge" id="badgeStatus">
+      <div class="status-badge status-connecting" id="badgeStatus">
         <div class="dot"></div>
-        <span id="txtStatus">Sensor Ready</span>
+        <span id="txtStatus">Menghubungkan Firebase...</span>
         <button id="btnInfo" class="btn-info" onclick="bukaModal()">i</button>
       </div>
       
@@ -350,42 +351,98 @@
     let timerPopup = null;
     let intervalLevel3 = null;
     let intervalLevel4 = null;
-    let currentSuhuGlobal = 0;
+    let currentSuhuGlobal = null;
+    let sensorAvailable = false;
+    let latestSensorData = null;
+
+    function setSensorStatus(message, isError, showInfo) {
+      const badge = document.getElementById('badgeStatus');
+      badge.className = isError
+        ? 'status-badge status-error'
+        : 'status-badge status-connecting';
+      document.getElementById('txtStatus').textContent = message;
+      document.getElementById('btnInfo').style.display = showInfo ? 'flex' : 'none';
+    }
+
+    function showUnavailableSensor(message, isError, showInfo) {
+      sensorAvailable = false;
+      currentSuhuGlobal = null;
+      latestSensorData = null;
+      setSensorStatus(message, isError, showInfo);
+      document.getElementById('nilaiSuhu').innerHTML = '--<span style="font-size: 3rem;">°C</span>';
+      document.getElementById('indHijau').className = 'ind-circle';
+      document.getElementById('indMerah').className = 'ind-circle';
+      document.getElementById('indBuzzer').className = 'ind-circle';
+      document.getElementById('txtWarning').style.display = 'none';
+      document.getElementById('popupTransisi').style.display = 'none';
+      if (timerPopup) {
+        clearTimeout(timerPopup);
+        timerPopup = null;
+      }
+      if (intervalLevel3) {
+        clearInterval(intervalLevel3);
+        intervalLevel3 = null;
+      }
+      if (intervalLevel4) {
+        clearInterval(intervalLevel4);
+        intervalLevel4 = null;
+      }
+      document.getElementById('spamContainer').innerHTML = '';
+    }
+
+    db.ref('.info/connected').on('value', (snapshot) => {
+      if (snapshot.val() !== true) {
+        showUnavailableSensor('Firebase terputus', true, false);
+      } else if (!sensorAvailable) {
+        setSensorStatus('Menunggu data sensor...', false, false);
+      }
+    }, (error) => {
+      console.error('Gagal memantau koneksi Firebase:', error);
+      showUnavailableSensor('Gagal terhubung ke Firebase', true, false);
+    });
 
     db.ref('sensor').on('value', (snapshot) => {
       const data = snapshot.val();
-      if (!data) return;
+      if (!data) {
+        showUnavailableSensor('Data sensor tidak ditemukan', true, true);
+        return;
+      }
 
-      currentSuhuGlobal = data.suhu;
+      const suhu = Number(data.suhu);
+      const suhuValid = data.suhu !== null && data.suhu !== '' && Number.isFinite(suhu);
+      if (data.sensor_ready === false || !suhuValid) {
+        showUnavailableSensor(
+          data.sensor_ready === false ? 'Sensor tidak terhubung' : 'Data suhu tidak valid',
+          true,
+          true
+        );
+        return;
+      }
+
+      sensorAvailable = true;
+      currentSuhuGlobal = suhu;
+      latestSensorData = data;
 
       // Status Sensor & Info Button
       let badge = document.getElementById('badgeStatus');
       let txtStatus = document.getElementById('txtStatus');
       let btnInfo = document.getElementById('btnInfo');
       
-      if (data.sensor_ready === false) {
-        badge.className = "status-badge status-error";
-        txtStatus.innerHTML = "Sensor Error!";
-        btnInfo.style.display = "flex";
-      } else {
-        badge.className = "status-badge status-ready";
-        txtStatus.innerHTML = "Sensor Ready";
-        btnInfo.style.display = "none";
-      }
+      badge.className = 'status-badge status-ready';
+      txtStatus.textContent = 'Sensor Ready';
+      btnInfo.style.display = 'none';
 
       // Update Suhu & Grafik
-      document.getElementById('nilaiSuhu').innerHTML = Number(data.suhu).toFixed(1) + '<span style="font-size: 3rem;">°C</span>';
+      document.getElementById('nilaiSuhu').innerHTML = suhu.toFixed(1) + '<span style="font-size: 3rem;">°C</span>';
       
-      if(data.sensor_ready) {
-        let waktu = new Date().toLocaleTimeString();
-        suhuChart.data.labels.push(waktu);
-        suhuChart.data.datasets[0].data.push(data.suhu);
-        if (suhuChart.data.labels.length > 20) {
-          suhuChart.data.labels.shift();
-          suhuChart.data.datasets[0].data.shift();
-        }
-        suhuChart.update();
+      let waktu = new Date().toLocaleTimeString();
+      suhuChart.data.labels.push(waktu);
+      suhuChart.data.datasets[0].data.push(suhu);
+      if (suhuChart.data.labels.length > 20) {
+        suhuChart.data.labels.shift();
+        suhuChart.data.datasets[0].data.shift();
       }
+      suhuChart.update();
 
       // Indikator Hardware
       document.getElementById('indHijau').className = data.hijau ? 'ind-circle on-hijau' : 'ind-circle';
@@ -419,6 +476,9 @@
         tanganiPopups(data.bahaya);
         prevBahaya = data.bahaya;
       }
+    }, (error) => {
+      console.error('Gagal membaca data sensor dari Firebase:', error);
+      showUnavailableSensor('Gagal membaca data Firebase', true, false);
     });
 
     function tanganiPopups(level) {
@@ -449,3 +509,51 @@
     function tampilkanPopupModal(judul, deskripsi, durasiMs) {
       let modal = document.getElementById('popupTransisi');
       document.getElementById('popTitle').innerText = judul;
+      document.getElementById('popDesc').innerText = deskripsi;
+      modal.style.display = 'flex';
+
+      if (timerPopup) clearTimeout(timerPopup);
+      timerPopup = setTimeout(() => {
+        modal.style.display = 'none';
+        timerPopup = null;
+      }, durasiMs);
+    }
+
+    function buatFloatingMini() {
+      const particle = document.createElement('div');
+      particle.className = 'floating-mini';
+      particle.textContent = '🔥 SUHU TINGGI!';
+      particle.style.left = Math.random() * 80 + 10 + 'vw';
+      document.body.appendChild(particle);
+      particle.addEventListener('animationend', () => particle.remove(), { once: true });
+    }
+
+    function buatSpamPopup() {
+      const popup = document.createElement('div');
+      popup.className = 'spam-popup';
+      popup.textContent = 'EVAKUASI SEGERA!';
+      popup.style.left = Math.random() * 75 + 'vw';
+      popup.style.top = Math.random() * 80 + 'vh';
+      document.getElementById('spamContainer').appendChild(popup);
+      setTimeout(() => popup.remove(), 3000);
+    }
+
+    function bukaModal() {
+      document.getElementById('modalMasalah').style.display = 'flex';
+    }
+
+    function tutupModal() {
+      document.getElementById('modalMasalah').style.display = 'none';
+    }
+
+    function toggleMute() {
+      if (!sensorAvailable || !latestSensorData || latestSensorData.is_muted === true) return;
+
+      db.ref('sensor/is_muted').set(true).catch((error) => {
+        console.error('Gagal mengaktifkan mute buzzer:', error);
+        setSensorStatus('Gagal mengubah status buzzer', true, false);
+      });
+    }
+  </script>
+</body>
+</html>
