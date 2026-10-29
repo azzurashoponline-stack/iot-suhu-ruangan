@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fire Alarm Dashboard</title>
   
-  <!-- Font Modern (Poppins) -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
   
   <style>
@@ -15,6 +14,7 @@
       --card-border: rgba(255, 255, 255, 0.08);
       --neon-red: #ff2a2a;
       --neon-green: #00ff88;
+      --neon-orange: #ff8c00;
       --text-main: #ffffff;
       --text-muted: #8892b0;
     }
@@ -27,9 +27,9 @@
       padding: 0;
       min-height: 100vh;
       overflow-x: hidden;
+      position: relative;
     }
 
-    /* Container Dashboard Utama */
     .dashboard-container {
       max-width: 1000px;
       margin: 0 auto;
@@ -39,14 +39,12 @@
       gap: 20px;
     }
 
-    /* Header */
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
       gap: 15px;
-      margin-bottom: 10px;
     }
 
     .title {
@@ -60,7 +58,6 @@
       letter-spacing: 2px;
     }
 
-    /* Glassmorphism Card Style */
     .card {
       background: var(--card-bg);
       backdrop-filter: blur(12px);
@@ -71,7 +68,6 @@
       box-shadow: 0 15px 35px rgba(0,0,0,0.4);
     }
 
-    /* Top Bar: Status & Mute */
     .top-bar {
       display: flex;
       justify-content: space-between;
@@ -99,9 +95,7 @@
       background: transparent; border: 2px solid var(--neon-red); color: var(--neon-red);
       border-radius: 50%; width: 28px; height: 28px; font-weight: bold;
       cursor: pointer; display: none; align-items: center; justify-content: center;
-      transition: 0.3s;
     }
-    .btn-info:hover { background: var(--neon-red); color: white; }
 
     .btn-mute {
       background: #e74c3c; color: white; border: none; padding: 12px 30px;
@@ -109,132 +103,142 @@
       transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
       box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
     }
-    .btn-mute:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(231, 76, 60, 0.6); }
-    .btn-mute:active { transform: translateY(1px); }
-    .btn-mute.muted { background: #555; box-shadow: none; }
+    .btn-mute.muted-locked { 
+      background: #444 !important; 
+      color: #aaa !important; 
+      cursor: not-allowed !important;
+      box-shadow: none !important;
+      border: 1px solid #666;
+    }
 
-    /* Main Temperature Display */
     .temp-card { text-align: center; position: relative; padding: 40px 20px; }
     .temp-label { color: var(--text-muted); font-size: 1.1rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
     .temp-value { font-size: 6rem; font-weight: 800; color: #fff; text-shadow: 0 0 30px rgba(255, 140, 0, 0.5); line-height: 1; }
 
-    /* Warning Banner */
     .warning-banner {
-      display: none; background: rgba(255, 42, 42, 0.1); border: 1px solid var(--neon-red);
+      display: none; background: rgba(255, 42, 42, 0.15); border: 1px solid var(--neon-red);
       border-radius: 15px; padding: 15px; margin-top: 20px; color: var(--neon-red);
       font-weight: 800; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 3px;
-      animation: flashWarning 1s infinite alternate;
+      animation: flashWarning 0.8s infinite alternate;
     }
     @keyframes flashWarning {
       0% { box-shadow: 0 0 10px rgba(255, 42, 42, 0.2); }
-      100% { box-shadow: 0 0 30px rgba(255, 42, 42, 0.6); background: rgba(255, 42, 42, 0.2); }
+      100% { box-shadow: 0 0 30px rgba(255, 42, 42, 0.7); background: rgba(255, 42, 42, 0.25); }
     }
 
-    /* Indicators Row */
     .indicators-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 20px;
     }
-    .indicator-item {
-      display: flex; flex-direction: column; align-items: center; gap: 15px; padding: 20px;
-    }
+    .indicator-item { display: flex; flex-direction: column; align-items: center; gap: 15px; padding: 20px; }
     .ind-circle {
       width: 60px; height: 60px; border-radius: 50%;
       background: #2a2a2a; border: 2px solid #444;
-      transition: all 0.3s ease;
-      position: relative; /* Penting untuk efek sirine */
-      overflow: hidden;   /* Memotong cahaya putar agar tetap bulat */
+      transition: all 0.3s ease; position: relative; overflow: hidden;
     }
-    .ind-label {
-      font-size: 1.1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
-    }
+    .ind-label { font-size: 1.1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
 
-    /* ---------------------------------------------------- */
-    /* EFEK WARNA & ANIMASI INDIKATOR AKTIF                 */
-    /* ---------------------------------------------------- */
     .on-hijau { background: var(--neon-green); border-color: var(--neon-green); box-shadow: 0 0 30px var(--neon-green); }
     .on-merah { background: var(--neon-red); border-color: var(--neon-red); box-shadow: 0 0 30px var(--neon-red); }
     
-    /* EFEK SPESIAL: LAMPU ALARM / SIRINE BERPUTAR */
     .on-buzzer { 
-      background: #3a0000; /* Warna dasar merah gelap */
-      border-color: #ff0000; 
+      background: #3a0000; border-color: #ff0000; 
       box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), inset 0 0 15px rgba(0,0,0,0.8);
     }
-    
-    /* Cahaya Sorot Muternya */
     .on-buzzer::before {
-      content: '';
-      position: absolute;
-      top: -50%; left: -50%; width: 200%; height: 200%;
-      background: conic-gradient(
-        transparent 0deg, 
-        rgba(255, 0, 0, 0.4) 60deg, 
-        #ff0000 120deg, 
-        transparent 150deg
-      );
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: conic-gradient(transparent 0deg, rgba(255, 0, 0, 0.4) 60deg, #ff0000 120deg, transparent 150deg);
       animation: rotate-siren 0.8s linear infinite;
     }
-
-    /* Bohlam/Titik Tengah Lampu (Biar Realistis) */
     .on-buzzer::after {
-      content: '';
-      position: absolute;
-      top: 50%; left: 50%; width: 22px; height: 22px;
-      background: radial-gradient(circle, #ffaaaa, #ff0000);
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 10px #ff0000, inset 0 0 5px #fff;
+      content: ''; position: absolute; top: 50%; left: 50%; width: 22px; height: 22px;
+      background: radial-gradient(circle, #ffaaaa, #ff0000); border-radius: 50%;
+      transform: translate(-50%, -50%); box-shadow: 0 0 10px #ff0000, inset 0 0 5px #fff;
     }
+    @keyframes rotate-siren { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    @keyframes rotate-siren {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    /* ---------------------------------------------------- */
-
-    /* Chart Card */
     .chart-card { height: 300px; padding: 20px; }
     canvas { width: 100% !important; height: 100% !important; }
 
-    /* Modal Pop-up */
+    /* Pop-up General (3 Detik Membesar-Kecil) */
+    .popup-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 1000;
+      justify-content: center; align-items: center;
+    }
+    .popup-box {
+      background: #1a1c23; border: 2px solid var(--neon-orange);
+      padding: 30px 40px; border-radius: 20px; text-align: center;
+      box-shadow: 0 0 50px rgba(255, 140, 0, 0.6);
+      animation: popPulse 0.8s infinite alternate ease-in-out;
+    }
+    @keyframes popPulse {
+      0% { transform: scale(0.85); }
+      100% { transform: scale(1.1); }
+    }
+
+    /* Floating Warning Particles (Level 3) */
+    .floating-mini {
+      position: fixed; bottom: -50px;
+      background: rgba(255, 42, 42, 0.85); color: white;
+      padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;
+      box-shadow: 0 0 15px rgba(255,0,0,0.8); pointer-events: none; z-index: 998;
+      animation: floatUp 3s linear forwards;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(0.8); opacity: 1; }
+      100% { transform: translateY(-110vh) scale(1.2); opacity: 0; }
+    }
+
+    /* Container Spam Level 4 */
+    #spamContainer {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 999; overflow: hidden;
+    }
+    .spam-popup {
+      position: absolute; background: #ff2a2a; color: white;
+      padding: 12px 20px; border-radius: 10px; font-weight: 800;
+      box-shadow: 0 0 20px #000; animation: popPulse 0.3s infinite alternate;
+    }
+
+    /* Modal Masalah Kabel */
     .modal-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 999;
-      justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;
+      background: rgba(0,0,0,0.85); z-index: 1001;
+      justify-content: center; align-items: center; padding: 20px;
     }
     .modal-content {
       background: #1a1c23; padding: 30px; border-radius: 20px; width: 100%; max-width: 450px;
-      border: 1px solid var(--neon-red); box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: left;
+      border: 1px solid var(--neon-red); text-align: left;
     }
-    .modal-content h3 { margin-top: 0; color: var(--neon-red); font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
-    .modal-content p { color: #ccc; line-height: 1.8; font-size: 1rem; margin-bottom: 25px; }
-    .btn-close { background: var(--neon-red); border: none; color: white; padding: 12px 20px; width: 100%; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 1rem; text-transform: uppercase; }
-
-    /* Responsif */
-    @media (max-width: 600px) {
-      .temp-value { font-size: 4.5rem; }
-      .header { justify-content: center; text-align: center; }
-      .top-bar { flex-direction: column; width: 100%; }
-      .btn-mute { width: 100%; }
+    .btn-close {
+      background: var(--neon-red); border: none; color: white; padding: 12px 20px; width: 100%;
+      border-radius: 10px; cursor: pointer; font-weight: 600; margin-top: 15px;
     }
   </style>
 
-  <!-- Firebase & Chart.js -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
+  <div id="spamContainer"></div>
+
+  <!-- Pop-up Modal Transisi / Waspada -->
+  <div class="popup-modal" id="popupTransisi">
+    <div class="popup-box" id="popupBoxContent">
+      <h2 id="popTitle" style="margin:0; font-size: 2.2rem; color: #ffaa00;">PERINGATAN</h2>
+      <p id="popDesc" style="margin: 10px 0 0 0; font-size: 1.2rem;">Status Suhu Berubah!</p>
+    </div>
+  </div>
+
   <div class="dashboard-container">
-    
     <div class="header">
       <h1 class="title">🔥 Fire Alarm System</h1>
     </div>
 
-    <!-- Top Bar (Status & Mute) -->
     <div class="card top-bar">
       <div class="status-badge" id="badgeStatus">
         <div class="dot"></div>
@@ -243,21 +247,19 @@
       </div>
       
       <button class="btn-mute" id="btnMute" onclick="toggleMute()">
-        Mute Buzzer
+        🔊 MUTE BUZZER
       </button>
     </div>
 
-    <!-- Main Temp & Warning -->
     <div class="card temp-card">
       <div class="temp-label">Suhu Ruangan Terkini</div>
       <div class="temp-value" id="nilaiSuhu">--<span style="font-size: 3rem;">°C</span></div>
       
       <div class="warning-banner" id="txtWarning">
-        ⚠️ Fire Level 1 ⚠️
+        ⚠️ FIRE ALARM ACTIVE ⚠️
       </div>
     </div>
 
-    <!-- Indicators -->
     <div class="card indicators-grid">
       <div class="indicator-item">
         <div class="ind-circle" id="indHijau"></div>
@@ -273,18 +275,15 @@
       </div>
     </div>
 
-    <!-- Chart -->
     <div class="card chart-card">
       <canvas id="suhuChart"></canvas>
     </div>
-
   </div>
 
-  <!-- Modal Peringatan Error -->
   <div class="modal-overlay" id="modalMasalah">
     <div class="modal-content">
-      <h3>⚠️ Sensor Tidak Terdeteksi</h3>
-      <p>
+      <h3 style="color:var(--neon-red); margin-top:0;">⚠️ Sensor Tidak Terdeteksi</h3>
+      <p style="color:#ccc; line-height: 1.8;">
         <b>1.</b> Periksa kabel DS18B20.<br>
         <b>2.</b> Pastikan kabel Data terhubung ke <b>GPIO 4</b> ESP32.<br>
         <b>3.</b> Periksa arus Power (3.3V) dan Ground (GND).<br>
@@ -295,7 +294,6 @@
   </div>
 
   <script>
-    // Konfigurasi Firebase Anda
     const firebaseConfig = {
       apiKey: "AIzaSyDT9qR7sXFsKVuT-u3kXd1jDOhLCuDsVLk",
       authDomain: "iot-fire-sensor.firebaseapp.com",
@@ -309,7 +307,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Inisialisasi Chart.js
+    // Chart Setup dengan Satuan °C di Sumbu Y
     Chart.defaults.color = '#8892b0';
     const ctx = document.getElementById('suhuChart').getContext('2d');
     
@@ -327,11 +325,7 @@
           borderColor: '#ff8c00',
           backgroundColor: gradientFill,
           borderWidth: 3,
-          pointBackgroundColor: '#fff',
-          pointBorderColor: '#ff8c00',
-          pointBorderWidth: 2,
           pointRadius: 3,
-          pointHoverRadius: 6,
           fill: true,
           tension: 0.4
         }]
@@ -339,30 +333,32 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            titleFont: { size: 13, family: 'Poppins' },
-            bodyFont: { size: 14, family: 'Poppins', weight: 'bold' },
-            padding: 10,
-            displayColors: false,
-            callbacks: { label: function(context) { return context.parsed.y + ' °C'; } }
-          }
-        },
+        plugins: { legend: { display: false } },
         scales: {
-          x: { display: false, grid: { display: false } },
-          y: { grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false }, suggestedMin: 20, suggestedMax: 60 }
+          x: { display: false },
+          y: { 
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: {
+              callback: function(value) { return value + ' °C'; } // Menampilkan °C di grafik
+            }
+          }
         }
       }
     });
 
-    // Proses Realtime Data Firebase
+    let prevBahaya = -1;
+    let timerPopup = null;
+    let intervalLevel3 = null;
+    let intervalLevel4 = null;
+    let currentSuhuGlobal = 0;
+
     db.ref('sensor').on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
 
-      // --- 1. Status Sensor & Tombol Info ---
+      currentSuhuGlobal = data.suhu;
+
+      // Status Sensor & Info Button
       let badge = document.getElementById('badgeStatus');
       let txtStatus = document.getElementById('txtStatus');
       let btnInfo = document.getElementById('btnInfo');
@@ -377,57 +373,79 @@
         btnInfo.style.display = "none";
       }
 
-      // --- 2. Update Suhu Besar & Grafik ---
+      // Update Suhu & Grafik
       document.getElementById('nilaiSuhu').innerHTML = Number(data.suhu).toFixed(1) + '<span style="font-size: 3rem;">°C</span>';
       
       if(data.sensor_ready) {
         let waktu = new Date().toLocaleTimeString();
         suhuChart.data.labels.push(waktu);
         suhuChart.data.datasets[0].data.push(data.suhu);
-        if (suhuChart.data.labels.length > 20) { 
+        if (suhuChart.data.labels.length > 20) {
           suhuChart.data.labels.shift();
           suhuChart.data.datasets[0].data.shift();
         }
         suhuChart.update();
       }
 
-      // --- 3. Animasi Lampu Indikator ---
+      // Indikator Hardware
       document.getElementById('indHijau').className = data.hijau ? 'ind-circle on-hijau' : 'ind-circle';
       document.getElementById('indMerah').className = data.merah ? 'ind-circle on-merah' : 'ind-circle';
-      
-      // Indikator Buzzer memanggil class efek sirine
       document.getElementById('indBuzzer').className = data.buzzer_ui ? 'ind-circle on-buzzer' : 'ind-circle';
 
-      // --- 4. Banner Peringatan Level 1 (Suhu >= 50) ---
+      // Banner Peringatan
       let txtWarning = document.getElementById('txtWarning');
-      if (data.bahaya === 1) {
+      if (data.bahaya >= 2) {
         txtWarning.style.display = "block";
+        if (data.bahaya === 2) txtWarning.innerHTML = "⚠️ FIRE LEVEL 1 (50°C+) ⚠️";
+        else if (data.bahaya === 3) txtWarning.innerHTML = "🔥 FIRE LEVEL 2 (65°C+) 🔥";
+        else if (data.bahaya === 4) txtWarning.innerHTML = "💥 FIRE LEVEL 3 (85°C+) 💥";
+        else if (data.bahaya === 5) txtWarning.innerHTML = "🌋 FIRE LEVEL 4 EVACUATE! (100°C+) 🌋";
       } else {
         txtWarning.style.display = "none";
       }
 
-      // --- 5. Tombol Mute UI ---
+      // Tombol Mute Lock UI
       let btnMute = document.getElementById('btnMute');
       if (data.is_muted) {
-        btnMute.innerHTML = '<span style="font-size:1.2rem;">🔇</span> BUZZER DIMUTE';
-        btnMute.classList.add("muted");
+        btnMute.innerHTML = "🔒 MUTED (TERKUNCI)";
+        btnMute.classList.add("muted-locked");
       } else {
-        btnMute.innerHTML = '<span style="font-size:1.2rem;">🔊</span> MUTE BUZZER';
-        btnMute.classList.remove("muted");
+        btnMute.innerHTML = "🔊 MUTE BUZZER";
+        btnMute.classList.remove("muted-locked");
+      }
+
+      // Logika Pop-up & Animasi Tiap Level Bahaya
+      if (data.bahaya !== prevBahaya) {
+        tanganiPopups(data.bahaya);
+        prevBahaya = data.bahaya;
       }
     });
 
-    // --- Fungsi Kirim Perintah Mute ---
-    function toggleMute() {
-      db.ref('sensor/is_muted').once('value').then((snapshot) => {
-        let statusSekarang = snapshot.val();
-        db.ref('sensor').update({ is_muted: !statusSekarang });
-      });
+    function tanganiPopups(level) {
+      // Clean up timernya
+      if (intervalLevel3) { clearInterval(intervalLevel3); intervalLevel3 = null; }
+      if (intervalLevel4) { clearInterval(intervalLevel4); intervalLevel4 = null; }
+      document.getElementById('spamContainer').innerHTML = '';
+
+      if (level === 1) { // WASPADA (35°C - 49°C)
+        tampilkanPopupModal("🟡 STATUS WASPADA", "Suhu ruangan meningkat (" + currentSuhuGlobal.toFixed(1) + "°C)", 3000);
+      } 
+      else if (level === 2) { // LEVEL 1
+        tampilkanPopupModal("🔴 FIRE LEVEL 1", "Peringatan bahaya suhu 50°C+!", 3000);
+      }
+      else if (level === 3) { // LEVEL 2
+        tampilkanPopupModal("🔥 FIRE LEVEL 2", "Bahaya meningkat suhu 65°C+!", 3000);
+      }
+      else if (level === 4) { // LEVEL 3 -> Pop-up Tengah Besar + Partikel Melayang dari Bawah ke Atas
+        tampilkanPopupModal("💥 FIRE LEVEL 3 💥", "Suhu Sangat Tinggi (85°C+)!", 5000);
+        intervalLevel3 = setInterval(buatFloatingMini, 600);
+      }
+      else if (level === 5) { // LEVEL 4 -> Mode Spam Pop-up Ekstrem
+        tampilkanPopupModal("🌋 FIRE LEVEL 4 MAX 🌋", "EVAKUASI SEGERA! (100°C+)", 5000);
+        intervalLevel4 = setInterval(buatSpamPopup, 150);
+      }
     }
 
-    // --- Fungsi Modal Pemecahan Masalah ---
-    function bukaModal() { document.getElementById('modalMasalah').style.display = 'flex'; }
-    function tutupModal() { document.getElementById('modalMasalah').style.display = 'none'; }
-  </script>
-</body>
-</html>
+    function tampilkanPopupModal(judul, deskripsi, durasiMs) {
+      let modal = document.getElementById('popupTransisi');
+      document.getElementById('popTitle').innerText = judul;
