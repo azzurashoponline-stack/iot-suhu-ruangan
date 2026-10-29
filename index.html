@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SCADA Industrial Control Terminal</title>
-  
+
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   
   <style>
@@ -244,13 +244,22 @@
     <div class="ind-card gauge-display-panel">
       <div class="gauge-wrapper">
         <svg class="gauge-svg" viewBox="0 0 240 140">
+          <defs>
+            <linearGradient id="gaugeZoneGradient" gradientUnits="userSpaceOnUse" x1="30" y1="120" x2="210" y2="120">
+              <stop offset="0%" stop-color="#00ff66"/>
+              <stop offset="25%" stop-color="#00ff66"/>
+              <stop offset="31%" stop-color="#f39c12"/>
+              <stop offset="47%" stop-color="#f39c12"/>
+              <stop offset="53%" stop-color="#ff2a2a"/>
+              <stop offset="100%" stop-color="#ff2a2a"/>
+            </linearGradient>
+          </defs>
+
           <!-- Background Gauge Arc -->
           <path d="M 30 120 A 90 90 0 0 1 210 120" fill="none" stroke="#1c222d" stroke-width="18" stroke-linecap="round"/>
 
-          <!-- Zones -->
-          <path d="M 30 120 A 90 90 0 0 1 93 39" fill="none" stroke="#00ff66" stroke-width="6" opacity="0.4"/>
-          <path d="M 93 39 A 90 90 0 0 1 120 30" fill="none" stroke="#f39c12" stroke-width="6" opacity="0.6"/>
-          <path d="M 120 30 A 90 90 0 0 1 210 120" fill="none" stroke="#ff2a2a" stroke-width="6" opacity="0.8"/>
+          <!-- Continuous temperature zones without segment seams -->
+          <path d="M 30 120 A 90 90 0 0 1 210 120" fill="none" stroke="url(#gaugeZoneGradient)" stroke-width="6" stroke-linecap="round"/>
 
           <!-- Ticks -->
           <text x="20" y="135" fill="#5c6b80" font-size="10" font-family="Chakra Petch">0°C</text>
